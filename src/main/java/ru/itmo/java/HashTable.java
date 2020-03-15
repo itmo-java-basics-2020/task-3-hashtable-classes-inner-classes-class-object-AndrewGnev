@@ -11,12 +11,10 @@ public class HashTable {
         public Entry(Object k, Object v) {
             key = k;
             value = v;
-            deleted = false;
         }
 
         Object key;
         Object value;
-        boolean deleted;
     }
 
     private Entry[] table;
@@ -41,71 +39,89 @@ public class HashTable {
         treshold = (int) (cap * loadFactor);
     }
 
-    private int FindFreePlace(Entry obj, Entry[] table) {
-        if (obj == null || obj.key == null) return -1;
-        int hash = abs(obj.key.hashCode() % cap);
-        int idx = -1;
-        for (int i = hash; i < cap + hash; ++i) {
-            if (table[i % cap] == null || table[i % cap].deleted || obj.key.equals(table[i % cap].key)) {
-                if (idx == -1) {
-                    idx = i % cap;
-                }
-                if (table[i % cap] != null && obj.key.equals(table[i % cap].key)) {
-                    idx = i % cap;
-                    break;
-                }
+    private boolean isBetween(int leftRange, int rightRange, int n) {
+        return (leftRange > rightRange) ?
+            (leftRange < n || n <= rightRange) :
+            (leftRange < n && n <= rightRange);
+    }
+
+    private int hash(Object key) {
+        return abs(key.hashCode() % cap);
+    }
+
+    private int removeByIndex(int index) {
+        int i = abs((index + 1) % cap);
+        if (table[i] == null) {
+            table[index] = table[i];
+            return i;
+        }
+        while (isBetween(index, i, hash(table[i].key))) {
+            i = abs((i + 1) % cap);
+            if (table[i] == null) {
+                break;
             }
         }
-        return idx;
+        table[index] = table[i];
+        return i;
     }
 
     Object put(Object key, Object value) {
         Entry newElement = new Entry(key, value);
-
-        int idx = FindFreePlace(newElement, table);
-        if (idx == -1) return null;
-        Entry ans = table[idx];
-
-        if (table[idx] == null || table[idx].deleted) {
-            size++;
-            if (size >= treshold) {
-                Entry[] buffTable = new Entry[cap * 2];
-                for (int i = 0; i < cap; ++i) {
-                    if (table[i] != null) {
-                        int index = FindFreePlace(table[i], buffTable);
-                        buffTable[index] = table[i];
-                    }
-                }
-                table = buffTable;
-                cap = table.length;
-                treshold = (int) (cap * loadFactor);
-            }
+        int i = hash(key);
+        Object ans;
+        while (table[i] != null && !table[i].key.equals(key)) {
+            i = abs((i + 1) % cap);
         }
 
-        table[idx] = newElement;
-        return (ans == null || ans.deleted) ? null : ans.value;
+        if (table[i] == null) {
+            size++;
+            ans = null;
+        } else {
+            ans = table[i].value;
+        }
+
+        table[i] = newElement;
+
+        if (size == treshold) {
+            Entry[] bufferTable = table;
+            table = new Entry[2 * cap];
+            cap = 2 * cap;
+            treshold = (int) (cap * loadFactor);
+            size = 0;
+            for (Entry entry : bufferTable) {
+                if (entry != null) {
+                    put(entry.key, entry.value);
+                }
+            }
+        }
+        return ans;
     }
 
     Object get(Object key) {
-        int hash = abs(key.hashCode() % cap);
-        for (int i = hash; i < cap + hash; ++i) {
-            if (table[i % cap] != null && table[i % cap].key.equals(key) && !table[i % cap].deleted) {
-                return table[i % cap].value;
-            }
+        int i = hash(key);
+        while (table[i] != null && !table[i].key.equals(key)) {
+            i = abs((i + 1) % cap);
         }
-        return null;
+        return (table[i] == null) ? null : table[i].value;
     }
 
     Object remove(Object key) {
-        int hash = abs(key.hashCode() % cap);
-        for (int i = hash; i < cap + hash; ++i) {
-            if (table[i % cap] != null && table[i % cap].key.equals(key) && !table[i % cap].deleted) {
-                table[i % cap].deleted = true;
-                size--;
-                return table[i % cap].value;
+        int i = hash(key.hashCode());
+        while (table[i] != null) {
+            if (table[i].key.equals(key)) {
+                break;
             }
+            i = abs((i + 1) % cap);
         }
-        return null;
+        if (table[i] == null) {
+            return null;
+        }
+        Object ans = table[i].value;
+        do {
+            i = removeByIndex(i);
+        } while (table[i] != null);
+        size--;
+        return ans;
     }
 
     int size() {
