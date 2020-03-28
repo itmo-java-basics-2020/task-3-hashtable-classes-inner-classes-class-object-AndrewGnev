@@ -8,9 +8,9 @@ public class HashTable {
 
     private class Entry {
 
-        public Entry(Object k, Object v) {
-            key = k;
-            value = v;
+        public Entry(Object key, Object value) {
+            this.key = key;
+            this.value = value;
         }
 
         Object key;
@@ -24,11 +24,7 @@ public class HashTable {
     private int cap;
 
     public HashTable(int capacity) {
-        table = new Entry[capacity];
-        loadFactor = 0.5;
-        cap = capacity;
-        size = 0;
-        treshold = (int) (cap * loadFactor);
+        this(capacity, 0.5f);
     }
 
     public HashTable(int capacity, float loadF) {
@@ -40,9 +36,9 @@ public class HashTable {
     }
 
     private boolean isBetween(int leftRange, int rightRange, int n) {
-        return (leftRange > rightRange) ?
-            (leftRange < n || n <= rightRange) :
-            (leftRange < n && n <= rightRange);
+        return (leftRange > rightRange)
+            ? (leftRange < n || n <= rightRange)
+            : (leftRange < n && n <= rightRange);
     }
 
     private int hash(Object key) {
@@ -50,22 +46,22 @@ public class HashTable {
     }
 
     private int removeByIndex(int index) {
-        int i = abs((index + 1) % cap);
-        if (table[i] == null) {
-            table[index] = table[i];
-            return i;
+        int pretenderForSubstitution = abs((index + 1) % cap);
+        if (table[pretenderForSubstitution] == null) {
+            table[index] = table[pretenderForSubstitution];
+            return pretenderForSubstitution;
         }
-        while (isBetween(index, i, hash(table[i].key))) {
-            i = abs((i + 1) % cap);
-            if (table[i] == null) {
+        while (isBetween(index, pretenderForSubstitution, hash(table[pretenderForSubstitution].key))) {
+            pretenderForSubstitution = abs((pretenderForSubstitution + 1) % cap);
+            if (table[pretenderForSubstitution] == null) {
                 break;
             }
         }
-        table[index] = table[i];
-        return i;
+        table[index] = table[pretenderForSubstitution];
+        return pretenderForSubstitution;
     }
 
-    Object put(Object key, Object value) {
+    public Object put(Object key, Object value) {
         Entry newElement = new Entry(key, value);
         int i = hash(key);
         Object ans;
@@ -97,7 +93,7 @@ public class HashTable {
         return ans;
     }
 
-    Object get(Object key) {
+    public Object get(Object key) {
         int i = hash(key);
         while (table[i] != null && !table[i].key.equals(key)) {
             i = abs((i + 1) % cap);
@@ -105,7 +101,7 @@ public class HashTable {
         return (table[i] == null) ? null : table[i].value;
     }
 
-    Object remove(Object key) {
+    public Object remove(Object key) {
         int i = hash(key.hashCode());
         while (table[i] != null) {
             if (table[i].key.equals(key)) {
@@ -124,7 +120,7 @@ public class HashTable {
         return ans;
     }
 
-    int size() {
+    public int size() {
         return size;
     }
 
